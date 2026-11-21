@@ -1,13 +1,15 @@
 import numpy as np
 import config
-from costs import optimize_acceleration
+from cbf import cbf_filter
 
 class Agent:
-    def __init__(self, agent_id, initial_position):
+    def __init__(self, agent_id, initial_position, formation_offset=(0,0,0)):
         self.agent_id = agent_id
         self.position = np.array(initial_position, dtype=float)
         self.velocity = np.zeros(3, dtype=float)
         self.acceleration = np.zeros(3, dtype=float)
+
+        self.formation_offset = np.array(formation_offset, dtype=float)
         
         self.current_goal = None
         
@@ -27,35 +29,42 @@ class Agent:
                 'timestamp': timestamp
             }
 
-    def get_neighbors_trajectories(self, current_time, T=config.HORIZON, n_sub=4):
+    def get_neighbors_now(self, current_time):
+        """Stato stimato dei vicini ADESSO (compensa il ritardo del messaggio)."""
         out = []
-        for k in range(1, n_sub + 1):
-            t_k = T * k / n_sub
-            pts = []
-            for data in self.knowledge_base.values():
-                tau = max(0.0, current_time - data['timestamp']) + t_k
-                pts.append(data['position'] + data['velocity'] * tau
-                           + 0.5 * data['acceleration'] * tau ** 2)
-            out.append((t_k, np.array(pts).reshape(-1, 3)))
-        return out
+        for d in self.knowledge_base.values():
+            tau = max(0.0, current_time - d['timestamp'])
+            a = d['acceleration']
+            v = d['velocity'] + a * tau
+            p = d['position'] + d['velocity'] * tau + 0.5 * a * tau ** 2
+            dist = np.linalg.norm(p - self.position)
+            if dist < config.CBF_NEIGHBOR_RANGE:
+                out.append((dist, p, v, a))
+        out.sort(key=lambda x: x[0])
+        return [(p, v, a) for _, p, v, a in out[:config.CBF_MAX_NEIGHBORS]]
+
+    def get_nearby_obstacles(self):
+        return [(c, r) for c, r in config.OBSTACLES
+                if np.linalg.norm(self.position - c) < r + config.CBF_NEIGHBOR_RANGE]
+
+    def nominal_acceleration(self):
+        if self.current_goal is None:
+            return -config.K_VEL * self.velocity          # frena
+        e = (self.current_goal + self.formation_offset) - self.position
+        v_des = config.K_POS * e
+        n = np.linalg.norm(v_des)
+        if n > config.V_CRUISE:
+            v_des *= config.V_CRUISE / n
+        return config.K_VEL * (v_des - self.velocity)
 
     def decide_next_action(self, current_time, weights=None):
-        if weights is None:
-            weights = (config.INITIAL_WEIGHTS['w_eta'], 
-                       config.INITIAL_WEIGHTS['w_y'], 
-                       config.INITIAL_WEIGHTS['w_g'])
-            
-        n_traj = self.get_neighbors_trajectories(current_time=current_time)
-
-        acc = optimize_acceleration(
-            p0=self.position,
-            v0=self.velocity,
-            neighbors_traj=n_traj,
-            p_goal=self.current_goal,
-            weights=weights
+        a, _ = cbf_filter(
+            p=self.position, v=self.velocity,
+            a_nom=self.nominal_acceleration(),
+            neighbors=self.get_neighbors_now(current_time),
+            obstacles=self.get_nearby_obstacles(),
         )
-        
-        return acc
+        return a
 
 
     def step(self, time, dt=config.DT):

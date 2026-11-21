@@ -1,0 +1,12 @@
+---TIME: 0.00---
+Agent --- id=Agent_0 --- pos=[ 0. 40.  0.]
+Agent --- id=Agent_1 --- pos=[10. 40.  0.]
+Agent --- id=Agent_2 --- pos=[20. 40.  0.]
+Agent --- id=Agent_3 --- pos=[ 0. 50.  0.]
+Agent --- id=Agent_4 --- pos=[10. 30.  0.]
+Agent --- id=Agent_5 --- pos=[ 0. 40. 10.]
+Agent --- id=Agent_6 --- pos=[ 0. 40. 20.]
+Agent --- id=Agent_7 --- pos=[10. 40. 10.]
+Agent --- id=Agent_8 --- pos=[10. 40. 20.]
+Agent --- id=Agent_9 --- pos=[10. 40. 30.]
+---END TIME: 0.0---

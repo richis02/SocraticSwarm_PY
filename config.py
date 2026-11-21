@@ -30,3 +30,16 @@ INITIAL_WEIGHTS = {
 }
 
 SEED = 44
+
+### NUOVO DI CLAUDE
+CBF_ALPHA1 = 2.0            # [1/s] più alto = meno conservativo, richiede più accelerazione
+CBF_ALPHA2 = 2.0
+CBF_SLACK_WEIGHT = 1e4      # penalità sulla violazione dei vincoli (slack)
+CBF_NEIGHBOR_RANGE = 5.0 * MIN_DISTANCE
+CBF_MAX_NEIGHBORS = 8       # considera solo i più vicini
+OBSTACLE_MARGIN = 1.0       # distanza extra dal bordo dell'ostacolo
+OBSTACLES = []              # lista di (centro np.array(3), raggio)
+
+K_POS = 0.5                 # nominale: guadagno sulla posizione
+K_VEL = 2.0                 # nominale: guadagno sulla velocità
+V_CRUISE = 0.8 * MAX_VELOCITY
