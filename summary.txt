@@ -1,0 +1,11 @@
+========== RIEPILOGO ==========
+Passi simulati:               1200  (T = 60.0 s, dt = 0.05)
+Distanza minima tra droni:    8.838 m  (Agent_5-Agent_7, t = 14.90 s)
+MIN_DISTANCE richiesta:       5.000 m
+Passi con violazione D_MIN:   0 / 1200
+Coppie-passo di 'schianto':   0
+Passi con slack > 0.001:    257 / 1200  (max slack = 0.6519)
+Attivazioni fallback 'frena': 0
+Max intervento del filtro:    3.992 m/s^2  (MAX_ACCEL = 2.5)
+Distanza media dal bersaglio: 24.21 m (a fine simulazione)
+Errore di formazione finale:  194.60 m

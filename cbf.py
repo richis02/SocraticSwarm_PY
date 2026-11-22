@@ -1,6 +1,7 @@
 import numpy as np
 from qpsolvers import solve_qp
 import config
+import scipy.sparse as sp
 
 
 def _hocbf_row(p, v, p_o, v_o, a_o, d_safe):
@@ -49,14 +50,22 @@ def cbf_filter(p, v, a_nom, neighbors, obstacles):
     m = len(rows)
 
     # variabili: [a (3), slack (m)]
-    P = np.diag([1.0] * 3 + [config.CBF_SLACK_WEIGHT] * m)
-    q = np.concatenate([-a_nom, np.zeros(m)])
-    G = np.hstack([-A, -np.eye(m)])          # -A a - s <= -b
+    P = sp.diags([1.0] * 3 + [config.CBF_SLACK_QUAD] * m, format="csc")
+    q = np.concatenate([-a_nom, np.full(m, config.CBF_SLACK_LIN)])
+    G = sp.csc_matrix(np.hstack([-A, -np.eye(m)]))     # -A a - s <= -b
     h = -b
     lb = np.concatenate([np.full(3, -a_lim), np.zeros(m)])
     ub = np.concatenate([np.full(3, a_lim), np.full(m, np.inf)])
 
-    sol = solve_qp(P, q, G, h, lb=lb, ub=ub, solver="osqp")
-    if sol is None:                           # fallback: frena
+    sol = solve_qp(P, q, G, h, lb=lb, ub=ub, solver="osqp",
+                   eps_abs=1e-5, eps_rel=1e-5, max_iter=20000)
+    if sol is None:
+        # fallback di emergenza: accelera via dal pericolo più vicino
+        cands = [n[0] for n in neighbors] + [c for c, _ in obstacles]
+        if cands:
+            nearest = min(cands, key=lambda x: np.linalg.norm(p - x))
+            away = p - nearest
+            away = away / max(np.linalg.norm(away), 1e-9)
+            return a_lim * away, np.inf
         return np.clip(-2.0 * v, -a_lim, a_lim), np.inf
     return sol[:3], float(sol[3:].max())
